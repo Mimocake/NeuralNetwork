@@ -1,11 +1,12 @@
 #include "Network.hpp"
 
-void Neuron::activation() { value = (1 / (1 + pow(e, -value))); }
+void Neuron::activation() { value = 1 / (1 + pow(e, -value)); }
 
 float Neuron::der() { return value * (1 - value); }
 
 Network::Network(vector<int> layers, bool b) : neurons(layers.size()), connections(layers.size() - 1), bios(b)
 {
+	srand(time(NULL));
 	NoL = layers.size();
 	for (int i = 0; i < layers.size(); i++)
 	{
@@ -78,13 +79,16 @@ float Network::back_propogation(vector<float> correct)
 		for (int i = 0; i < neurons[n].size() - bios; i++)
 		{
 			neurons[n][i].error = 0;
-			for (int j = 0; j < neurons[n + 1].size() - bios; j++)
+			int d = (n + 1 == (NoL - 1)) ? neurons[n + 1].size() : neurons[n + 1].size() - bios;
+			for (int j = 0; j < d; j++)
 			{
 				neurons[n][i].error += neurons[n + 1][j].error * connections[n][i][j];
 				tot_error += pow(neurons[n][i].error, 2);
 			}
+			neurons[n][i].error *= neurons[n][i].der();
 		}
 	}
+		
 	for (int n = 0; n < NoL - 1; n++)
 	{
 		for (int i = 0; i < neurons[n].size(); i++)
@@ -92,8 +96,8 @@ float Network::back_propogation(vector<float> correct)
 			int d = (n + 1 == (NoL - 1)) ? neurons[n + 1].size() : neurons[n + 1].size() - bios;
 			for (int j = 0; j < d; j++)
 			{
-				float d = r * neurons[n + 1][j].error * neurons[n][i].der() * neurons[n][i].value;
-				connections[n][i][j] += d;
+				float q = r * neurons[n + 1][j].error * neurons[n][i].value;
+				connections[n][i][j] += q;
 			}
 		}
 	}
@@ -102,7 +106,7 @@ float Network::back_propogation(vector<float> correct)
 
 void Network::store()
 {
-	ofstream ofile("network.dat", ios::binary);
+	ofstream ofile("network.dat", ios::binary | ios::trunc);
 	ofile.write((char*)&bios, sizeof(bios));
 	ofile.write((char*)&NoL, sizeof(NoL));
 	for (int i = 0; i < NoL; i++)

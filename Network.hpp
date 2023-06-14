@@ -6,7 +6,7 @@
 using namespace std;
 
 const float e = 2.72;
-const float r = 0.5;
+const float r = 0.3;
 
 class Neuron
 {
