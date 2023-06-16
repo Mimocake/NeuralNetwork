@@ -2,39 +2,47 @@
 #include "SFML/Graphics.hpp"
 using namespace sf;
 
-struct pnt
-{
-    float x, y;
-    Color color;
-    CircleShape circ;
-    pnt() {}
-    pnt(float xx, float yy, Color col) : x(xx), y(yy), color(col)
-    {
-        circ.setPosition(Vector2f(x, y));
-        circ.setRadius(7);
-        circ.setOutlineColor(Color::Black);
-        circ.setOutlineThickness(2);
-        circ.setFillColor(col);
-    }
-};
 
 int main()
 {
-    const int height = 1280, width = 720, size = 20;
-    ifstream infile("dataset.dat", ios::binary);
+    const int size = 30, len = 25;
     vector<float> input(9), output(2), res(2);
-    vector<int> layers = { 2, 5, 5, 2 };
+    vector<int> layers = { 9, 4, 3, 2 };
     Network network(layers, 1);
-    RenderWindow window(VideoMode(height, width), "Neural network", Style::Close);
-    vector<pnt> points(0);
-    vector<vector<RectangleShape>> screen(height / size);
-    for (int i = 0; i < width / size; i++)
+    network.load();
+    float er = 0;
+    bool b;
+    int p = 0, n = 0;
+    RenderWindow window(VideoMode(1920, 1080), "Neural network", Style::Close);
+    RectangleShape frame(Vector2f(770, 770));
+    frame.setFillColor(Color(127, 127, 127));
+    frame.setPosition(Vector2f(190, 190));
+    RectangleShape clear(Vector2f(200, 100));
+    clear.setPosition(Vector2f(500, 50));
+    clear.setFillColor(Color::Black);
+    clear.setOutlineColor(Color::White);
+    clear.setOutlineThickness(3);
+    Font font;
+    font.loadFromFile("arialmt.ttf");
+    Text tclear;
+    tclear.setFont(font);
+    tclear.setString("Clear");
+    tclear.setCharacterSize(80);
+    tclear.setPosition(Vector2f(505, 45));
+    tclear.setFillColor(Color::White);
+    vector<RectangleShape> inputs(len * len, RectangleShape(Vector2f(size, size)));
+    vector<RectangleShape> outputs(11, RectangleShape(Vector2f(50, 50)));
+    float x, y;
+    for (int i = 0; i < len * len; i++)
     {
-        screen[i] = vector<RectangleShape>(height / size, RectangleShape(Vector2f(size, size)));
-        for (int j = 0; j < height / size; j++)
+        inputs[i].setFillColor(Color::Black);
+        inputs[i].setPosition(Vector2f(200 + size * (i % len), 200 + size * (i / len)));
+        if (i < 11)
         {
-            screen[i][j].setFillColor(Color(0, 255, 255));
-            screen[i][j].setPosition(Vector2f(j * size, i * size));
+            outputs[i].setFillColor(Color::Black);
+            outputs[i].setOutlineColor(Color::White);
+            outputs[i].setOutlineThickness(4);
+            outputs[i].setPosition(Vector2f(1000, 205 + 70 * (i % 11)));
         }
     }
     while (window.isOpen())
@@ -46,40 +54,38 @@ int main()
             {
             case Event::Closed: window.close(); break;
             case Event::MouseButtonPressed:
-                if (event.mouseButton.button == Mouse::Left)
-                    points.push_back(pnt(event.mouseButton.x, event.mouseButton.y, Color::Green));
-                else points.push_back(pnt(event.mouseButton.x, event.mouseButton.y, Color::Blue));
+                x = event.mouseButton.x;
+                y = event.mouseButton.y;
+                for (int i = 0; i < 11; i++)
+                    if (x > outputs[i].getPosition().x && x < outputs[i].getPosition().x + 50 &&
+                        y > outputs[i].getPosition().y && y < outputs[i].getPosition().y + 50)
+                        outputs[i].setFillColor((outputs[i].getFillColor() == Color::White) ? Color::Black : Color::White);
+                if (x > clear.getPosition().x && x < clear.getPosition().x + 200 &&
+                    y > clear.getPosition().y && y < clear.getPosition().y + 100)
+                    for (int i = 0; i < len * len; i++)
+                        inputs[i].setFillColor(Color::Black);
                 break;
-            default: 
-                for (int i = 0; i < points.size(); i++)
+            default:
+                float x, y;
+                x = Mouse::getPosition().x - window.getPosition().x - 9;
+                y = Mouse::getPosition().y - window.getPosition().y - 38;
+                for (int i = 0; i < len * len; i++)
                 {
-                    float x = points[i].x / (0.5 * height) - 1;
-                    float y = points[i].y / (0.5 * width) - 1;
-                    res = network.signal_passing(vector<float>{x, y});
-                    cout << res[0] << " " << res[1] << endl;
-                    network.back_propogation(vector<float>{(float)points[i].color.g / 255, (float)points[i].color.b / 255});
+                    if (x > inputs[i].getPosition().x && x < inputs[i].getPosition().x + size &&
+                        y > inputs[i].getPosition().y && y < inputs[i].getPosition().y + size)
+                        if (Mouse::isButtonPressed(Mouse::Left)) inputs[i].setFillColor(Color::White);
+                        else if (Mouse::isButtonPressed(Mouse::Right)) inputs[i].setFillColor(Color::Black);
                 }
-                if (points.size())
-                {
-                    for (int i = 0; i < width / size; i++)
-                        for (int j = 0; j < height / size; j++)
-                        {
-                            Vector2f vec = screen[i][j].getPosition();
-                            float x = (vec.x) / (0.5 * height) - 1;
-                            float y = (vec.y) / (0.5 * width) - 1;
-                            res = network.signal_passing(vector<float>{x, y});
-                            screen[i][j].setFillColor(Color(50, res[0] * 255, res[1] * 255));
-                        }
-                }
-            break;
+                break;
             }
         }
-        for (int i = 0; i < width / size; i++)
-            for (int j = 0; j < height / size; j++)
-                window.draw(screen[i][j]);
-        for (int i = 0; i < points.size(); i++)
-            window.draw(points[i].circ);
+        window.clear();
+        window.draw(frame);
+        window.draw(clear);
+        window.draw(tclear);
+        for (int i = 0; i < len * len; i++) window.draw(inputs[i]);
+        for (int i = 0; i < 11; i++) window.draw(outputs[i]);
         window.display();
-    } 
-	return 0;
+    }
+    return 0;
 }
