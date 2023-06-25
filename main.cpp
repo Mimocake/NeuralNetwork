@@ -178,7 +178,7 @@ int main()
         {
             switch (event.type)
             {
-            case Event::Closed: window.close(); break;
+            case Event::Closed: window.close(); ifile.close(); break;
            /* case Event::MouseButtonPressed:
                 x = event.mouseButton.x;
                 y = event.mouseButton.y;
