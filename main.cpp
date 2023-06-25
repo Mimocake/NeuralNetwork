@@ -67,7 +67,7 @@ void read_mnist()
 int main()
 {
     const int size = 30;
-    vector<float> input(len * len), output(10), res(10);
+    vector<float> input(len * len), res(10);
     vector<int> layers = { len * len, 300, 50, 10 };
     Network network(layers, 1);
     float er = 0, tot_er = 0, x, y;
@@ -80,11 +80,17 @@ int main()
     frame.setFillColor(Color(127, 127, 127));
     frame.setPosition(Vector2f(90, 90));
 
-    RectangleShape clear(Vector2f(200, 100));
-    clear.setPosition(Vector2f(500, 50));
+    RectangleShape clear(Vector2f(100, 50));
+    clear.setPosition(Vector2f(1100, 820));
     clear.setFillColor(Color::Black);
     clear.setOutlineColor(Color::White);
     clear.setOutlineThickness(3);
+
+    RectangleShape send(Vector2f(100, 50));
+    send.setPosition(Vector2f(1100, 890));
+    send.setFillColor(Color::Black);
+    send.setOutlineColor(Color::White);
+    send.setOutlineThickness(3);
 
     Font font;
     font.loadFromFile("arialmt.ttf");
@@ -92,9 +98,16 @@ int main()
     Text tclear;
     tclear.setFont(font);
     tclear.setString("Clear");
-    tclear.setCharacterSize(80);
-    tclear.setPosition(Vector2f(505, 45));
+    tclear.setCharacterSize(40);
+    tclear.setPosition(Vector2f(1105, 815));
     tclear.setFillColor(Color::White);
+
+    Text tsend;
+    tsend.setFont(font);
+    tsend.setString("Send");
+    tsend.setCharacterSize(40);
+    tsend.setPosition(Vector2f(1105, 885));
+    tsend.setFillColor(Color::White);
 
     vector<Text> digits(10);
     vector<Text> result(10);
@@ -113,57 +126,14 @@ int main()
     }
 
     vector<RectangleShape> inputs(len * len, RectangleShape(Vector2f(size, size)));
-    vector<RectangleShape> outputs(10, RectangleShape(Vector2f(50, 50)));
     vector<RectangleShape> net_outputs(10, RectangleShape(Vector2f(50, 50)));
-
-    Text steps;
-    steps.setFont(font);
-    steps.setString("Steps");
-    steps.setCharacterSize(50);
-    steps.setPosition(Vector2f(1000, 800));
-    steps.setFillColor(Color::White);
-
-    Text s_steps;
-    s_steps.setFont(font);
-    s_steps.setString(to_string(s));
-    s_steps.setCharacterSize(40);
-    s_steps.setPosition(Vector2f(1000, 870));
-    s_steps.setFillColor(Color::White);
-
-    Text n_steps;
-    n_steps.setFont(font);
-    n_steps.setString(to_string(n));
-    n_steps.setCharacterSize(40);
-    n_steps.setPosition(Vector2f(1070, 870));
-    n_steps.setFillColor(Color::White);
-    
-    Text Error;
-    Error.setFont(font);
-    Error.setString("Error");
-    Error.setCharacterSize(50);
-    Error.setPosition(Vector2f(1200, 800));
-    Error.setFillColor(Color::White);
-
-    Text t_error;
-    t_error.setFont(font);
-    t_error.setString(to_string(tot_er));
-    t_error.setCharacterSize(40);
-    t_error.setPosition(Vector2f(1200, 870));
-    t_error.setFillColor(Color::White);
-
-    ifstream ifile("dataset.dat", ios::binary);
-
-    ofstream error_file("error.txt");
 
     for (int i = 0; i < len * len; i++)
     {
         inputs[i].setPosition(Vector2f(100 + size * (i % len), 100 + size * (i / len)));
+        inputs[i].setFillColor(Color::Black);
         if (i < 10)
         {
-            outputs[i].setFillColor(Color::Black);
-            outputs[i].setOutlineColor(Color::White);
-            outputs[i].setOutlineThickness(4);
-            outputs[i].setPosition(Vector2f(1000, 105 + 70 * (i % 10)));
             net_outputs[i].setFillColor(Color::Black);
             net_outputs[i].setOutlineColor(Color::White);
             net_outputs[i].setOutlineThickness(4);
@@ -178,14 +148,42 @@ int main()
         {
             switch (event.type)
             {
-            case Event::Closed: window.close(); ifile.close(); break;
-           /* case Event::MouseButtonPressed:
+            case Event::Closed: window.close(); break;
+            case Event::MouseButtonPressed:
                 x = event.mouseButton.x;
                 y = event.mouseButton.y;
-                if (x > clear.getPosition().x && x < clear.getPosition().x + 200 &&
-                    y > clear.getPosition().y && y < clear.getPosition().y + 100)
+                if (x > clear.getPosition().x && x < clear.getPosition().x + 100 &&
+                    y > clear.getPosition().y && y < clear.getPosition().y + 50)
+                {
                     for (int i = 0; i < len * len; i++)
                         inputs[i].setFillColor(Color::Black);
+                    for (int i = 0; i < 10; i++)
+                    {
+                        net_outputs[i].setFillColor(Color::Black);
+                        result[i].setString("N/A");
+                    }
+                }
+                if (x > send.getPosition().x && x < send.getPosition().x + 200 &&
+                    y > send.getPosition().y && y < send.getPosition().y + 100)
+                {
+                    for (int i = 0; i < len * len; i++)
+                    {
+                        input[i] = inputs[i].getFillColor() == Color::White;
+                    }
+                    res = network.signal_passing(input);
+                    float max = 0;
+                    int index = 0;
+                    for (int i = 0; i < 10; i++)
+                    {
+                        result[i].setString(to_string(res[i]));
+                        if (res[i] > max)
+                        {
+                            max = res[i];
+                            index = i;
+                        }
+                    }
+                    net_outputs[index].setFillColor(Color::White);
+                }
                 break;
             default:
                 float x, y;
@@ -195,77 +193,40 @@ int main()
                 {
                     if (x > inputs[i].getPosition().x && x < inputs[i].getPosition().x + size &&
                         y > inputs[i].getPosition().y && y < inputs[i].getPosition().y + size)
-                        if (Mouse::isButtonPressed(Mouse::Left)) inputs[i].setFillColor(Color::White);
-                        else if (Mouse::isButtonPressed(Mouse::Right)) inputs[i].setFillColor(Color::Black);
+                        if (Mouse::isButtonPressed(Mouse::Left))
+                        {
+                            inputs[i].setFillColor(Color::White);
+                            inputs[i % len == 0 ? i : i - 1].setFillColor(Color::White);
+                            inputs[i % len == len - 1 ? i : i + 1].setFillColor(Color::White);
+                            inputs[i / len == 0 ? i : i - len].setFillColor(Color::White);
+                            inputs[i / len == len - 1 ? i : i + len].setFillColor(Color::White);
+                        }
+                        else if (Mouse::isButtonPressed(Mouse::Right))
+                        {
+                            inputs[i].setFillColor(Color::Black);
+                            inputs[i % len == 0 ? i : i - 1].setFillColor(Color::Black);
+                            inputs[i % len == len - 1 ? i : i + 1].setFillColor(Color::Black);
+                            inputs[i / len == 0 ? i : i - len].setFillColor(Color::Black);
+                            inputs[i / len == len - 1 ? i : i + len].setFillColor(Color::Black);
+                        }
                 }
-                break;*/
+                break;
             }
         }
-        for (; n < 59999; n++)
+        window.clear();
+        window.draw(frame);
+        window.draw(clear);
+        window.draw(tclear);
+        window.draw(send);
+        window.draw(tsend);
+        for (int i = 0; i < len * len; i++) window.draw(inputs[i]);
+        for (int i = 0; i < 10; i++)
         {
-            for (int i = 0; i < len * len; i++)
-            {
-                bool b;
-                ifile.read((char*)&b, 1);
-                input[i] = b;
-                inputs[i].setFillColor(b ? Color::White : Color::Black);
-                if (i < 10)
-                {
-                outputs[i].setFillColor(Color::Black);
-                net_outputs[i].setFillColor(Color::Black);
-                }
-            }
-
-            char c;
-            ifile.read((char*)&c, 1);
-            outputs[c].setFillColor(Color::White);
-            for (int i = 0; i < 10; i++) output[i] = 0;
-            output[c] = 1;
-
-            res = network.signal_passing(input);
-            er += network.back_propogation(output);
-
-            float max = 0;
-            int index = 0;
-            for (int i = 0; i < 10; i++)
-            {
-                result[i].setString(to_string(res[i]));
-                if (res[i] > max)
-                {
-                    max = res[i];
-                    index = i;
-                }
-            }
-            net_outputs[index].setFillColor(Color::White);
-            n_steps.setString(to_string(n));
-            window.clear();
-            window.draw(frame);
-            window.draw(steps);
-            window.draw(s_steps);
-            window.draw(n_steps);
-            window.draw(Error);
-            window.draw(t_error);
-            //window.draw(clear);
-            //window.draw(tclear);
-            for (int i = 0; i < len * len; i++) window.draw(inputs[i]);
-            for (int i = 0; i < 10; i++)
-            {
-                window.draw(outputs[i]);
-                window.draw(net_outputs[i]);
-                window.draw(digits[i]);
-                window.draw(result[i]);
-            }
-            window.display();
+            window.draw(net_outputs[i]);
+            window.draw(digits[i]);
+            window.draw(result[i]);
         }
-        ifile.seekg(0);
-        n = 0;
-        tot_er = er;
-        er = 0;
-        t_error.setString(to_string(tot_er));
-        s++;
-        s_steps.setString(to_string(s));
-        network.store();
-        error_file << tot_er << "\n";
+        window.display();
     }
     return 0;
 }
